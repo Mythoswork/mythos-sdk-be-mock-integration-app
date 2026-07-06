@@ -46,6 +46,7 @@ export default function Calculator() {
       .then((body) => {
         if (body.success) {
           setSession(body.data);
+          window.parent.postMessage({ type: 'mythos:handshake' }, '*');
         } else {
           setSessionError(body.error ?? 'Session verification failed');
         }
