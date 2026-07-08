@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { requireLaunchToken } from '@mythos/sdk';
-import type { MythosSession } from '@mythos/sdk';
+import { requireLaunchToken } from '@mythos-work/sdk';
+import type { MythosSession } from '@mythos-work/sdk';
 
 const handler = requireLaunchToken();
 

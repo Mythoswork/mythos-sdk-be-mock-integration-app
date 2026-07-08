@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { handshakeRoute } from '@mythos/sdk';
+import { handshakeRoute } from '@mythos-work/sdk';
 
 const handler = handshakeRoute();
 

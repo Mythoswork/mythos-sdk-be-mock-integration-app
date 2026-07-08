@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { verifyLaunchToken, reportUsage, InsufficientFundsError, SessionNotFoundError } from '@mythos/sdk';
+import { verifyLaunchToken, reportUsage, InsufficientFundsError, SessionNotFoundError } from '@mythos-work/sdk';
 
 const CREDITS_PER_CALCULATION = 1;
 

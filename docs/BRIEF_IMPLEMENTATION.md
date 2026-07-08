@@ -1,6 +1,6 @@
 # Mythos Calculator Mockup — Implementation Brief
 
-Mockup Next.js app (Pages Router) exercising the full Mythos producer lifecycle: launch, handshake, consume, meter. Consumes `@mythos/sdk` (`fix/sdk-issuer-and-charge-id` branch) as a local dependency.
+Mockup Next.js app (Pages Router) exercising the full Mythos producer lifecycle: launch, handshake, consume, meter. Consumes `@mythos-work/sdk` (`fix/sdk-issuer-and-charge-id` branch) as a local dependency.
 
 ## What's in here
 

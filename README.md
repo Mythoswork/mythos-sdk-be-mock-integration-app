@@ -1,6 +1,6 @@
 # Mythos Calculator Mockup
 
-Reference/worked example of a **Producer** (third-party SaaS) integration with the Mythos marketplace. This is a disposable calculator app that exists only to prove the full `@mythos/sdk` contract end-to-end against a real running `mythos-backend`. Copy the pattern, not the calculator.
+Reference/worked example of a **Producer** (third-party SaaS) integration with the Mythos marketplace. This is a disposable calculator app that exists only to prove the full `@mythos-work/sdk` contract end-to-end against a real running `mythos-backend`. Copy the pattern, not the calculator.
 
 If you're integrating your own SaaS with Mythos, this doc is the part that matters — everything else in this repo is throwaway demo scaffolding (harness login page, fake standalone auth, etc).
 
@@ -22,7 +22,7 @@ None of this requires you to know anything about Mythos users, passwords, or ses
 ## 1. Install the SDK
 
 ```bash
-npm install @mythos/sdk
+npm install @mythos-work/sdk
 ```
 
 (This repo pins a local `file:` tarball since the SDK isn't published yet — see `package.json`. A real integration would use the published package.)
@@ -36,7 +36,7 @@ Mythos calls `POST /api/listings/web-app` (from your side, someone registers you
 ```ts
 // pages/api/well-known/mythos-handshake.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { handshakeRoute } from '@mythos/sdk';
+import { handshakeRoute } from '@mythos-work/sdk';
 
 const handler = handshakeRoute();
 
@@ -55,7 +55,7 @@ When your app loads with `?lt=<token>`, call this **exactly once** — it atomic
 
 ```ts
 // pages/api/verify-session.ts
-import { requireLaunchToken } from '@mythos/sdk';
+import { requireLaunchToken } from '@mythos-work/sdk';
 
 const handler = requireLaunchToken();
 
@@ -90,7 +90,7 @@ Do **not** call `requireLaunchToken()` again for this — it consumes, and you a
 
 ```ts
 // pages/api/calculate.ts
-import { verifyLaunchToken, reportUsage, InsufficientFundsError, SessionNotFoundError } from '@mythos/sdk';
+import { verifyLaunchToken, reportUsage, InsufficientFundsError, SessionNotFoundError } from '@mythos-work/sdk';
 
 const session = await verifyLaunchToken(lt);
 const result = doTheWork();
