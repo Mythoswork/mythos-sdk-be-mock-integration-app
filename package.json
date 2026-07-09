@@ -10,7 +10,7 @@
     "bootstrap": "tsx scripts/bootstrap.ts"
   },
   "dependencies": {
-    "@mythos-work/sdk": "0.0.3",
+    "@mythos-work/sdk": "0.0.4",
     "express": "^4.19.2",
     "next": "16.2.10",
     "react": "19.2.4",

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyLaunchToken, reportUsage, InsufficientFundsError, SessionNotFoundError } from '@mythos-work/sdk';
+import { getListingIds } from '../../lib/listing-ids-store';
 
 const CREDITS_PER_CALCULATION = 1;
 
@@ -37,7 +38,7 @@ export default async function calculate(req: NextApiRequest, res: NextApiRespons
   }
 
   try {
-    const session = await verifyLaunchToken(lt);
+    const session = await verifyLaunchToken(lt, { resolveListingIds: getListingIds });
     const result = compute(operation, a, b);
     await reportUsage(session.sessionJti, { credits: CREDITS_PER_CALCULATION, reason: `calculator:${operation}` });
     res.status(200).json({ success: true, data: { result, creditsCharged: CREDITS_PER_CALCULATION } });
