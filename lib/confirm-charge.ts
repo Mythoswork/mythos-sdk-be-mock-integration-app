@@ -19,6 +19,7 @@ export function confirmCharge(
 ): Promise<boolean> {
   return new Promise((resolve) => {
     if (window === window.parent) {
+      console.warn('[confirm-charge] not embedded in a parent frame — skipping charge.');
       resolve(false);
       return;
     }
@@ -32,6 +33,7 @@ export function confirmCharge(
 
     const timer = window.setTimeout(() => {
       if (settled) return;
+      console.warn('[confirm-charge] timed out waiting for a response — skipping charge.');
       window.parent.postMessage({ type: 'mythos:confirm-charge-timeout', requestId }, '*');
       cleanup();
       resolve(false);

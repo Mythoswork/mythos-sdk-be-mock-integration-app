@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { confirmCharge } from '@/lib/confirm-charge';
+import { CREDITS_PER_CALCULATION } from '@/lib/pricing';
 
 interface MythosSession {
   userId: string;
@@ -38,7 +39,8 @@ export default function Calculator() {
   const [creditsChargedTotal, setCreditsChargedTotal] = useState(0);
   const [calcError, setCalcError] = useState<string | null>(null);
   const [requireConfirmation, setRequireConfirmation] = useState(true);
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!lt || verifyStarted.current) return;
@@ -60,29 +62,37 @@ export default function Calculator() {
   async function handleCalculate() {
     if (!lt) return;
     setCalcError(null);
+    setIsSubmitting(true);
 
-    if (requireConfirmation) {
-      setIsConfirming(true);
-      const approved = await confirmCharge(1, `${operation}(${a}, ${b})`);
-      setIsConfirming(false);
-      if (!approved) {
-        setCalcError('Charge declined, timed out, or no dashboard listener responded — see console.');
+    try {
+      if (requireConfirmation) {
+        setPendingLabel('Waiting for confirmation…');
+        const approved = await confirmCharge(CREDITS_PER_CALCULATION, `${operation}(${a}, ${b})`);
+        if (!approved) {
+          setCalcError(
+            'Charge declined, timed out, or the dashboard is not listening — check the console for details.',
+          );
+          return;
+        }
+      }
+
+      setPendingLabel('Calculating…');
+      const res = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lt, operation, a, b }),
+      });
+      const body = await res.json();
+      if (!body.success) {
+        setCalcError(body.error);
         return;
       }
+      setResult(body.data.result);
+      setCreditsChargedTotal((prev) => prev + body.data.creditsCharged);
+    } finally {
+      setIsSubmitting(false);
+      setPendingLabel(null);
     }
-
-    const res = await fetch('/api/calculate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lt, operation, a, b }),
-    });
-    const body = await res.json();
-    if (!body.success) {
-      setCalcError(body.error);
-      return;
-    }
-    setResult(body.data.result);
-    setCreditsChargedTotal((prev) => prev + body.data.creditsCharged);
   }
 
   function handleStandaloneLogin() {
@@ -198,7 +208,7 @@ export default function Calculator() {
           type="checkbox"
           checked={requireConfirmation}
           onChange={(e) => setRequireConfirmation(e.target.checked)}
-          disabled={isConfirming}
+          disabled={isSubmitting}
         />
         Require confirmation before charging (<code>requireConfirmation</code>)
       </label>
@@ -206,20 +216,20 @@ export default function Calculator() {
       {calcError && <p style={{ color: 'red' }}>{calcError}</p>}
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
-        <input type="number" value={a} onChange={(e) => setA(Number(e.target.value))} disabled={isConfirming} />
+        <input type="number" value={a} onChange={(e) => setA(Number(e.target.value))} disabled={isSubmitting} />
         <select
           value={operation}
           onChange={(e) => setOperation(e.target.value as Operation)}
-          disabled={isConfirming}
+          disabled={isSubmitting}
         >
           <option value="add">+</option>
           <option value="subtract">-</option>
           <option value="multiply">*</option>
           <option value="divide">/</option>
         </select>
-        <input type="number" value={b} onChange={(e) => setB(Number(e.target.value))} disabled={isConfirming} />
-        <button onClick={handleCalculate} disabled={isConfirming}>
-          {isConfirming ? 'Waiting for confirmation…' : '='}
+        <input type="number" value={b} onChange={(e) => setB(Number(e.target.value))} disabled={isSubmitting} />
+        <button onClick={handleCalculate} disabled={isSubmitting}>
+          {pendingLabel ?? '='}
         </button>
       </div>
 

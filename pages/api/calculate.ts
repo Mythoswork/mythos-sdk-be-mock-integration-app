@@ -1,8 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyLaunchToken, reportUsage, InsufficientFundsError, SessionNotFoundError } from '@mythos-work/sdk';
 import { getListingIds } from '../../lib/listing-ids-store';
-
-const CREDITS_PER_CALCULATION = 1;
+import { CREDITS_PER_CALCULATION } from '../../lib/pricing';
 
 type Operation = 'add' | 'subtract' | 'multiply' | 'divide';
 
