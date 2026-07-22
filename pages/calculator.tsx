@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
+import { confirmCharge } from '@/lib/confirm-charge';
 
 interface MythosSession {
   userId: string;
@@ -57,6 +58,13 @@ export default function Calculator() {
   async function handleCalculate() {
     if (!lt) return;
     setCalcError(null);
+
+    const approved = await confirmCharge(1, `${operation}(${a}, ${b})`);
+    if (!approved) {
+      setCalcError('Charge declined');
+      return;
+    }
+
     const res = await fetch('/api/calculate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
