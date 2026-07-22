@@ -120,6 +120,42 @@ These are two totally separate, non-linked identity systems. A user authenticate
 
 ---
 
+## 5b. Pre-charge confirmation (optional)
+
+For billable actions where the Consumer should explicitly approve a charge before it fires
+(e.g. a large or unusual credit spend), gate the client-side call to your own metering endpoint
+behind a `postMessage` round trip with the Mythos dashboard (`window.parent`), instead of
+calling it unconditionally. This app demonstrates that pattern in `lib/confirm-charge.ts`,
+wired up in `pages/calculator.tsx` behind a `requireConfirmation` checkbox in the UI:
+
+```ts
+// lib/confirm-charge.ts — adapted from mythos-sdk/docs/examples/mythos-client.ts.
+// Resolves false (never rejects) on timeout, decline, or if not embedded — fail-closed.
+const approved = await confirmCharge(1, `${operation}(${a}, ${b})`);
+if (!approved) return; // charge skipped — your metering endpoint is never called
+```
+
+Protocol (identical to the reference client's contract):
+
+```json
+// producer iframe -> window.parent
+{ "type": "mythos:confirm-charge", "requestId": "<uuid>", "credits": 1, "reason": "add(1, 2)" }
+// window.parent -> producer iframe
+{ "type": "mythos:confirm-charge-response", "requestId": "<uuid>", "approved": true }
+// on timeout, producer iframe -> window.parent (so the dashboard can close a stale prompt)
+{ "type": "mythos:confirm-charge-timeout", "requestId": "<uuid>" }
+```
+
+Fail-closed: the charge is skipped (your `/api/calculate`-equivalent is never called) if the
+page isn't embedded, if no matching response arrives within the timeout (default `10000`ms),
+or if the response is `approved: false`.
+
+This depends entirely on the Mythos dashboard implementing the `mythos:confirm-charge`
+listener and confirmation UI on its side — without `requireConfirmation` (unchecked, the
+default), behavior is unchanged: metering fires immediately, same as step 5 above.
+
+---
+
 ## Registering your app as a listing
 
 `POST /api/listings/web-app` (Mythos backend) with `{ title, description, category, launch_url, status, cover_image }`. `launch_url` must be `https://` with a real TLD in production (local dev backends may relax this — check with whoever runs your target `mythos-backend` instance).
@@ -149,3 +185,4 @@ The SDK reads `MYTHOS_LISTING_ID` per-request (not cached) to validate the `aud`
 - [ ] `InsufficientFundsError` / `SessionNotFoundError` mapped to sane HTTP responses, not generic 500s
 - [ ] Own auth/paywall (if any) fully bypassed when `lt` is present
 - [ ] Listing registered with a reachable `launch_url` (HTTPS + real TLD in production)
+- [ ] (Optional) Pre-charge confirmation wired for actions that warrant it — see step 5b

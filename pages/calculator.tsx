@@ -37,6 +37,8 @@ export default function Calculator() {
   const [result, setResult] = useState<number | null>(null);
   const [creditsChargedTotal, setCreditsChargedTotal] = useState(0);
   const [calcError, setCalcError] = useState<string | null>(null);
+  const [requireConfirmation, setRequireConfirmation] = useState(true);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
     if (!lt || verifyStarted.current) return;
@@ -59,10 +61,14 @@ export default function Calculator() {
     if (!lt) return;
     setCalcError(null);
 
-    const approved = await confirmCharge(1, `${operation}(${a}, ${b})`);
-    if (!approved) {
-      setCalcError('Charge declined');
-      return;
+    if (requireConfirmation) {
+      setIsConfirming(true);
+      const approved = await confirmCharge(1, `${operation}(${a}, ${b})`);
+      setIsConfirming(false);
+      if (!approved) {
+        setCalcError('Charge declined, timed out, or no dashboard listener responded — see console.');
+        return;
+      }
     }
 
     const res = await fetch('/api/calculate', {
@@ -187,18 +193,34 @@ export default function Calculator() {
       </p>
       <p>Credits charged this session: {creditsChargedTotal}</p>
 
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
+        <input
+          type="checkbox"
+          checked={requireConfirmation}
+          onChange={(e) => setRequireConfirmation(e.target.checked)}
+          disabled={isConfirming}
+        />
+        Require confirmation before charging (<code>requireConfirmation</code>)
+      </label>
+
       {calcError && <p style={{ color: 'red' }}>{calcError}</p>}
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
-        <input type="number" value={a} onChange={(e) => setA(Number(e.target.value))} />
-        <select value={operation} onChange={(e) => setOperation(e.target.value as Operation)}>
+        <input type="number" value={a} onChange={(e) => setA(Number(e.target.value))} disabled={isConfirming} />
+        <select
+          value={operation}
+          onChange={(e) => setOperation(e.target.value as Operation)}
+          disabled={isConfirming}
+        >
           <option value="add">+</option>
           <option value="subtract">-</option>
           <option value="multiply">*</option>
           <option value="divide">/</option>
         </select>
-        <input type="number" value={b} onChange={(e) => setB(Number(e.target.value))} />
-        <button onClick={handleCalculate}>=</button>
+        <input type="number" value={b} onChange={(e) => setB(Number(e.target.value))} disabled={isConfirming} />
+        <button onClick={handleCalculate} disabled={isConfirming}>
+          {isConfirming ? 'Waiting for confirmation…' : '='}
+        </button>
       </div>
 
       {result !== null && <p>Result: {result}</p>}
