@@ -126,7 +126,8 @@ For billable actions where the Consumer should explicitly approve a charge befor
 (e.g. a large or unusual credit spend), gate the client-side call to your own metering endpoint
 behind a `postMessage` round trip with the Mythos dashboard (`window.parent`), instead of
 calling it unconditionally. This app demonstrates that pattern in `lib/confirm-charge.ts`,
-wired up in `pages/calculator.tsx` behind a `requireConfirmation` checkbox in the UI:
+wired up in `pages/calculator.tsx` behind a `requireConfirmation` checkbox in the UI, **checked by
+default** — unticking it is an explicit opt-out, not the starting state:
 
 ```ts
 // lib/confirm-charge.ts — adapted from mythos-sdk/docs/examples/mythos-client.ts.
@@ -151,8 +152,12 @@ page isn't embedded, if no matching response arrives within the timeout (default
 or if the response is `approved: false`.
 
 This depends entirely on the Mythos dashboard implementing the `mythos:confirm-charge`
-listener and confirmation UI on its side — without `requireConfirmation` (unchecked, the
-default), behavior is unchanged: metering fires immediately, same as step 5 above.
+listener and confirmation UI on its side. Because `requireConfirmation` defaults to checked,
+**any dashboard that hasn't implemented the listener yet — or direct/non-embedded access to
+this page — will see every charge silently declined** (the 10s timeout in
+`lib/confirm-charge.ts` expires with no response, or the page isn't embedded at all, and
+`confirmCharge` fails closed). Untick the checkbox to fall back to unconditional metering
+(same as step 5 above) while your dashboard's listener is still in progress.
 
 ---
 
