@@ -38,7 +38,7 @@ export default function Calculator() {
   const [result, setResult] = useState<number | null>(null);
   const [creditsChargedTotal, setCreditsChargedTotal] = useState(0);
   const [calcError, setCalcError] = useState<string | null>(null);
-  const [requireConfirmation, setRequireConfirmation] = useState(true);
+  const [requireConfirmation, setRequireConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
