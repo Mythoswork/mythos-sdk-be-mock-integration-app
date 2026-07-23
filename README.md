@@ -120,14 +120,13 @@ These are two totally separate, non-linked identity systems. A user authenticate
 
 ---
 
-## 5b. Pre-charge confirmation (optional)
+## 5b. Pre-charge confirmation (required)
 
-For billable actions where the Consumer should explicitly approve a charge before it fires
-(e.g. a large or unusual credit spend), gate the client-side call to your own metering endpoint
+Before firing any billable action, gate the client-side call to your own metering endpoint
 behind a `postMessage` round trip with the Mythos dashboard (`window.parent`), instead of
-calling it unconditionally. This app demonstrates that pattern in `lib/confirm-charge.ts`,
-wired up in `pages/calculator.tsx` behind a `requireConfirmation` checkbox in the UI, **checked by
-default** — unticking it is an explicit opt-out, not the starting state:
+calling it unconditionally — the Consumer must explicitly approve every charge. This app
+demonstrates that pattern in `lib/confirm-charge.ts`, wired up unconditionally in
+`pages/calculator.tsx`'s `handleCalculate`:
 
 ```ts
 // lib/confirm-charge.ts — adapted from mythos-sdk/docs/examples/mythos-client.ts.
@@ -152,12 +151,12 @@ page isn't embedded, if no matching response arrives within the timeout (default
 or if the response is `approved: false`.
 
 This depends entirely on the Mythos dashboard implementing the `mythos:confirm-charge`
-listener and confirmation UI on its side. Because `requireConfirmation` defaults to checked,
-**any dashboard that hasn't implemented the listener yet — or direct/non-embedded access to
-this page — will see every charge silently declined** (the 10s timeout in
-`lib/confirm-charge.ts` expires with no response, or the page isn't embedded at all, and
-`confirmCharge` fails closed). Untick the checkbox to fall back to unconditional metering
-(same as step 5 above) while your dashboard's listener is still in progress.
+listener and confirmation UI on its side. There is no opt-out — **any dashboard that hasn't
+implemented the listener yet, or any non-embedded access to this page (including this repo's
+own "Open Calculator" harness link on `/`, which opens in a new tab, not an iframe), will see
+every charge silently declined.** Testing the full confirm → charge path locally requires
+embedding `/calculator?lt=...` in a page that implements the `mythos:confirm-charge` listener
+yourself.
 
 ---
 

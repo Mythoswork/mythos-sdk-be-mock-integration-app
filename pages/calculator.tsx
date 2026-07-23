@@ -38,7 +38,6 @@ export default function Calculator() {
   const [result, setResult] = useState<number | null>(null);
   const [creditsChargedTotal, setCreditsChargedTotal] = useState(0);
   const [calcError, setCalcError] = useState<string | null>(null);
-  const [requireConfirmation, setRequireConfirmation] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
@@ -65,15 +64,13 @@ export default function Calculator() {
     setIsSubmitting(true);
 
     try {
-      if (requireConfirmation) {
-        setPendingLabel('Waiting for confirmation…');
-        const approved = await confirmCharge(CREDITS_PER_CALCULATION, `${operation}(${a}, ${b})`);
-        if (!approved) {
-          setCalcError(
-            'Charge declined, timed out, or the dashboard is not listening — check the console for details.',
-          );
-          return;
-        }
+      setPendingLabel('Waiting for confirmation…');
+      const approved = await confirmCharge(CREDITS_PER_CALCULATION, `${operation}(${a}, ${b})`);
+      if (!approved) {
+        setCalcError(
+          'Charge declined, timed out, or the dashboard is not listening — check the console for details.',
+        );
+        return;
       }
 
       setPendingLabel('Calculating…');
@@ -202,16 +199,6 @@ export default function Calculator() {
         Welcome, {session.displayName} ({session.email})
       </p>
       <p>Credits charged this session: {creditsChargedTotal}</p>
-
-      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-        <input
-          type="checkbox"
-          checked={requireConfirmation}
-          onChange={(e) => setRequireConfirmation(e.target.checked)}
-          disabled={isSubmitting}
-        />
-        Require confirmation before charging (<code>requireConfirmation</code>)
-      </label>
 
       {calcError && <p style={{ color: 'red' }}>{calcError}</p>}
 
