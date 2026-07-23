@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
+import { confirmCharge } from '@/lib/confirm-charge';
+import { CREDITS_PER_CALCULATION } from '@/lib/pricing';
 
 interface MythosSession {
   userId: string;
@@ -36,6 +38,8 @@ export default function Calculator() {
   const [result, setResult] = useState<number | null>(null);
   const [creditsChargedTotal, setCreditsChargedTotal] = useState(0);
   const [calcError, setCalcError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!lt || verifyStarted.current) return;
@@ -57,18 +61,35 @@ export default function Calculator() {
   async function handleCalculate() {
     if (!lt) return;
     setCalcError(null);
-    const res = await fetch('/api/calculate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lt, operation, a, b }),
-    });
-    const body = await res.json();
-    if (!body.success) {
-      setCalcError(body.error);
-      return;
+    setIsSubmitting(true);
+
+    try {
+      setPendingLabel('Waiting for confirmation…');
+      const approved = await confirmCharge(CREDITS_PER_CALCULATION, `${operation}(${a}, ${b})`);
+      if (!approved) {
+        setCalcError(
+          'Charge declined, timed out, or the dashboard is not listening — check the console for details.',
+        );
+        return;
+      }
+
+      setPendingLabel('Calculating…');
+      const res = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lt, operation, a, b }),
+      });
+      const body = await res.json();
+      if (!body.success) {
+        setCalcError(body.error);
+        return;
+      }
+      setResult(body.data.result);
+      setCreditsChargedTotal((prev) => prev + body.data.creditsCharged);
+    } finally {
+      setIsSubmitting(false);
+      setPendingLabel(null);
     }
-    setResult(body.data.result);
-    setCreditsChargedTotal((prev) => prev + body.data.creditsCharged);
   }
 
   function handleStandaloneLogin() {
@@ -182,15 +203,21 @@ export default function Calculator() {
       {calcError && <p style={{ color: 'red' }}>{calcError}</p>}
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
-        <input type="number" value={a} onChange={(e) => setA(Number(e.target.value))} />
-        <select value={operation} onChange={(e) => setOperation(e.target.value as Operation)}>
+        <input type="number" value={a} onChange={(e) => setA(Number(e.target.value))} disabled={isSubmitting} />
+        <select
+          value={operation}
+          onChange={(e) => setOperation(e.target.value as Operation)}
+          disabled={isSubmitting}
+        >
           <option value="add">+</option>
           <option value="subtract">-</option>
           <option value="multiply">*</option>
           <option value="divide">/</option>
         </select>
-        <input type="number" value={b} onChange={(e) => setB(Number(e.target.value))} />
-        <button onClick={handleCalculate}>=</button>
+        <input type="number" value={b} onChange={(e) => setB(Number(e.target.value))} disabled={isSubmitting} />
+        <button onClick={handleCalculate} disabled={isSubmitting}>
+          {pendingLabel ?? '='}
+        </button>
       </div>
 
       {result !== null && <p>Result: {result}</p>}

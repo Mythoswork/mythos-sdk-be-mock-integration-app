@@ -120,6 +120,46 @@ These are two totally separate, non-linked identity systems. A user authenticate
 
 ---
 
+## 5b. Pre-charge confirmation (required)
+
+Before firing any billable action, gate the client-side call to your own metering endpoint
+behind a `postMessage` round trip with the Mythos dashboard (`window.parent`), instead of
+calling it unconditionally — the Consumer must explicitly approve every charge. This app
+demonstrates that pattern in `lib/confirm-charge.ts`, wired up unconditionally in
+`pages/calculator.tsx`'s `handleCalculate`:
+
+```ts
+// lib/confirm-charge.ts — adapted from mythos-sdk/docs/examples/mythos-client.ts.
+// Resolves false (never rejects) on timeout, decline, or if not embedded — fail-closed.
+const approved = await confirmCharge(1, `${operation}(${a}, ${b})`);
+if (!approved) return; // charge skipped — your metering endpoint is never called
+```
+
+Protocol (identical to the reference client's contract):
+
+```json
+// producer iframe -> window.parent
+{ "type": "mythos:confirm-charge", "requestId": "<uuid>", "credits": 1, "reason": "add(1, 2)" }
+// window.parent -> producer iframe
+{ "type": "mythos:confirm-charge-response", "requestId": "<uuid>", "approved": true }
+// on timeout, producer iframe -> window.parent (so the dashboard can close a stale prompt)
+{ "type": "mythos:confirm-charge-timeout", "requestId": "<uuid>" }
+```
+
+Fail-closed: the charge is skipped (your `/api/calculate`-equivalent is never called) if the
+page isn't embedded, if no matching response arrives within the timeout (default `10000`ms),
+or if the response is `approved: false`.
+
+This depends entirely on the Mythos dashboard implementing the `mythos:confirm-charge`
+listener and confirmation UI on its side. There is no opt-out — **any dashboard that hasn't
+implemented the listener yet, or any non-embedded access to this page (including this repo's
+own "Open Calculator" harness link on `/`, which opens in a new tab, not an iframe), will see
+every charge silently declined.** Testing the full confirm → charge path locally requires
+embedding `/calculator?lt=...` in a page that implements the `mythos:confirm-charge` listener
+yourself.
+
+---
+
 ## Registering your app as a listing
 
 `POST /api/listings/web-app` (Mythos backend) with `{ title, description, category, launch_url, status, cover_image }`. `launch_url` must be `https://` with a real TLD in production (local dev backends may relax this — check with whoever runs your target `mythos-backend` instance).
@@ -149,3 +189,4 @@ The SDK reads `MYTHOS_LISTING_ID` per-request (not cached) to validate the `aud`
 - [ ] `InsufficientFundsError` / `SessionNotFoundError` mapped to sane HTTP responses, not generic 500s
 - [ ] Own auth/paywall (if any) fully bypassed when `lt` is present
 - [ ] Listing registered with a reachable `launch_url` (HTTPS + real TLD in production)
+- [ ] (Optional) Pre-charge confirmation wired for actions that warrant it — see step 5b
